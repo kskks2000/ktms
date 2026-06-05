@@ -1,0 +1,1 @@
+"""KTMS FastAPI application package."""
