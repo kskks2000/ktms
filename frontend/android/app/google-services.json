@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "244152480982",
+    "project_id": "ktms-60214",
+    "storage_bucket": "ktms-60214.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:244152480982:android:9649333eb4296bcb4d8577",
+        "android_client_info": {
+          "package_name": "com.kcastle.ktms_frontend"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "244152480982-9o9j9navid5a93fn39prtktm6cm8u1tc.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDJsNTS9DUw1K53pg6u_6gQTcGt3PVB9Q4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "244152480982-9o9j9navid5a93fn39prtktm6cm8u1tc.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "244152480982-l3iirma9hv3nrpr6bem3nv1khu1v8jl5.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.kcastle.ktmsFrontend"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

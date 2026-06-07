@@ -28,6 +28,13 @@ class AuthService {
 
   static bool _googleInitialized = false;
 
+  factory AuthService.disabled([String? reason]) {
+    return AuthService._(
+      firebaseReady: false,
+      disabledReason: reason ?? 'Firebase is not available in this context.',
+    );
+  }
+
   static Future<AuthService> bootstrap() async {
     try {
       if (Firebase.apps.isEmpty) {
@@ -35,19 +42,25 @@ class AuthService {
           options: DefaultFirebaseOptions.currentPlatform,
         );
       }
-
-      if (!_googleInitialized) {
-        await GoogleSignIn.instance.initialize();
-        _googleInitialized = true;
-      }
-
-      return const AuthService._(firebaseReady: true);
     } catch (_) {
       return const AuthService._(
         firebaseReady: false,
         disabledReason: 'Firebase is not configured yet.',
       );
     }
+
+    if (!kIsWeb) {
+      if (!_googleInitialized) {
+        try {
+          await GoogleSignIn.instance.initialize();
+          _googleInitialized = true;
+        } catch (_) {
+          // Email/password and web popup auth can still run without this.
+        }
+      }
+    }
+
+    return const AuthService._(firebaseReady: true);
   }
 
   Stream<User?> authStateChanges() {
@@ -75,6 +88,35 @@ class AuthService {
       return AuthActionResult.failed(_friendlyFirebaseMessage(error));
     } catch (_) {
       return AuthActionResult.failed('Unable to sign in. Please try again.');
+    }
+  }
+
+  Future<AuthActionResult> createAccountWithEmailAndPassword({
+    required String displayName,
+    required String email,
+    required String password,
+  }) async {
+    if (!firebaseReady) {
+      return AuthActionResult.failed(_configurationMessage);
+    }
+
+    try {
+      final credential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(
+            email: email.trim(),
+            password: password,
+          );
+
+      final trimmedName = displayName.trim();
+      if (trimmedName.isNotEmpty) {
+        await credential.user?.updateDisplayName(trimmedName);
+      }
+
+      return AuthActionResult.ok('Account created successfully.');
+    } on FirebaseAuthException catch (error) {
+      return AuthActionResult.failed(_friendlyFirebaseMessage(error));
+    } catch (_) {
+      return AuthActionResult.failed('Unable to create the account.');
     }
   }
 
@@ -149,6 +191,10 @@ class AuthService {
     switch (error.code) {
       case 'invalid-email':
         return 'Enter a valid email address.';
+      case 'email-already-in-use':
+        return 'This email is already registered.';
+      case 'weak-password':
+        return 'Use a stronger password.';
       case 'user-disabled':
         return 'This account has been disabled.';
       case 'user-not-found':
@@ -159,8 +205,14 @@ class AuthService {
         return 'Too many attempts. Please try again later.';
       case 'network-request-failed':
         return 'Network connection failed. Please check your connection.';
+      case 'operation-not-allowed':
+        return 'This sign-in provider is not enabled in Firebase.';
       case 'popup-closed-by-user':
         return 'Google sign-in was cancelled.';
+      case 'popup-blocked':
+        return 'The browser blocked the Google sign-in popup.';
+      case 'unauthorized-domain':
+        return 'This domain is not authorized in Firebase Authentication.';
       default:
         return error.message ?? 'Authentication failed. Please try again.';
     }

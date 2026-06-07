@@ -5,6 +5,8 @@ import '../design/app_theme.dart';
 import '../features/dashboard/signed_in_page.dart';
 import 'auth_service.dart';
 
+enum _AuthMode { signIn, signUp }
+
 class LoginPage extends StatefulWidget {
   const LoginPage({required this.authService, super.key});
 
@@ -16,21 +18,44 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
 
+  _AuthMode _mode = _AuthMode.signIn;
   bool _rememberMe = true;
+  bool _termsAccepted = false;
   bool _passwordVisible = false;
+  bool _confirmPasswordVisible = false;
   bool _emailBusy = false;
   bool _googleBusy = false;
 
   bool get _busy => _emailBusy || _googleBusy;
+  bool get _isSignUp => _mode == _AuthMode.signUp;
 
   @override
   void dispose() {
+    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  void _setMode(_AuthMode mode) {
+    if (_mode == mode || _busy) {
+      return;
+    }
+
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _mode = mode;
+      _termsAccepted = false;
+      _passwordVisible = false;
+      _confirmPasswordVisible = false;
+      _formKey.currentState?.reset();
+    });
   }
 
   Future<void> _submitEmailPassword() async {
@@ -39,12 +64,24 @@ class _LoginPageState extends State<LoginPage> {
     if (!_formKey.currentState!.validate()) {
       return;
     }
+    if (_isSignUp && !_termsAccepted) {
+      _showResult(
+        AuthActionResult.failed('Accept the account terms to continue.'),
+      );
+      return;
+    }
 
     setState(() => _emailBusy = true);
-    final result = await widget.authService.signInWithEmailAndPassword(
-      email: _emailController.text,
-      password: _passwordController.text,
-    );
+    final result = _isSignUp
+        ? await widget.authService.createAccountWithEmailAndPassword(
+            displayName: _nameController.text,
+            email: _emailController.text,
+            password: _passwordController.text,
+          )
+        : await widget.authService.signInWithEmailAndPassword(
+            email: _emailController.text,
+            password: _passwordController.text,
+          );
 
     if (!mounted) {
       return;
@@ -120,6 +157,32 @@ class _LoginPageState extends State<LoginPage> {
     }
     if (password.length < 6) {
       return 'Password must be at least 6 characters.';
+    }
+    return null;
+  }
+
+  String? _nameValidator(String? value) {
+    if (!_isSignUp) {
+      return null;
+    }
+
+    final name = value?.trim() ?? '';
+    if (name.isEmpty) {
+      return 'Name is required.';
+    }
+    if (name.length < 2) {
+      return 'Enter at least 2 characters.';
+    }
+    return null;
+  }
+
+  String? _confirmPasswordValidator(String? value) {
+    if (!_isSignUp) {
+      return null;
+    }
+
+    if (value != _passwordController.text) {
+      return 'Passwords do not match.';
     }
     return null;
   }
@@ -201,9 +264,32 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 34),
+                const SizedBox(height: 28),
+                SizedBox(
+                  width: double.infinity,
+                  child: SegmentedButton<_AuthMode>(
+                    showSelectedIcon: false,
+                    selected: <_AuthMode>{_mode},
+                    onSelectionChanged: _busy
+                        ? null
+                        : (selection) => _setMode(selection.single),
+                    segments: const [
+                      ButtonSegment<_AuthMode>(
+                        value: _AuthMode.signIn,
+                        icon: Icon(Icons.login_rounded),
+                        label: Text('Sign in'),
+                      ),
+                      ButtonSegment<_AuthMode>(
+                        value: _AuthMode.signUp,
+                        icon: Icon(Icons.person_add_alt_1_rounded),
+                        label: Text('Create account'),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 28),
                 Text(
-                  'Sign in',
+                  _isSignUp ? 'Create account' : 'Sign in',
                   style: textTheme.headlineMedium?.copyWith(
                     color: AppTheme.graphite,
                     fontWeight: FontWeight.w900,
@@ -212,7 +298,9 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Secure access for enterprise transport operations.',
+                  _isSignUp
+                      ? 'Request secure access for your transport workspace.'
+                      : 'Secure access for enterprise transport operations.',
                   style: textTheme.bodyMedium?.copyWith(
                     color: AppTheme.slate,
                     height: 1.4,
@@ -220,6 +308,20 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ),
                 const SizedBox(height: 26),
+                if (_isSignUp) ...[
+                  TextFormField(
+                    controller: _nameController,
+                    enabled: !_busy,
+                    textInputAction: TextInputAction.next,
+                    autofillHints: const [AutofillHints.name],
+                    validator: _nameValidator,
+                    decoration: const InputDecoration(
+                      labelText: 'Full name',
+                      prefixIcon: Icon(Icons.badge_outlined),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 TextFormField(
                   controller: _emailController,
                   enabled: !_busy,
@@ -237,10 +339,16 @@ class _LoginPageState extends State<LoginPage> {
                   controller: _passwordController,
                   enabled: !_busy,
                   obscureText: !_passwordVisible,
-                  textInputAction: TextInputAction.done,
+                  textInputAction: _isSignUp
+                      ? TextInputAction.next
+                      : TextInputAction.done,
                   autofillHints: const [AutofillHints.password],
                   validator: _passwordValidator,
-                  onFieldSubmitted: (_) => _submitEmailPassword(),
+                  onFieldSubmitted: (_) {
+                    if (!_isSignUp) {
+                      _submitEmailPassword();
+                    }
+                  },
                   decoration: InputDecoration(
                     labelText: 'Password',
                     prefixIcon: const Icon(Icons.lock_outline_rounded),
@@ -263,38 +371,104 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: Checkbox(
-                        value: _rememberMe,
-                        onChanged: _busy
+                if (_isSignUp) ...[
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _confirmPasswordController,
+                    enabled: !_busy,
+                    obscureText: !_confirmPasswordVisible,
+                    textInputAction: TextInputAction.done,
+                    autofillHints: const [AutofillHints.newPassword],
+                    validator: _confirmPasswordValidator,
+                    onFieldSubmitted: (_) => _submitEmailPassword(),
+                    decoration: InputDecoration(
+                      labelText: 'Confirm password',
+                      prefixIcon: const Icon(Icons.lock_reset_rounded),
+                      suffixIcon: IconButton(
+                        tooltip: _confirmPasswordVisible
+                            ? 'Hide password'
+                            : 'Show password',
+                        onPressed: _busy
                             ? null
-                            : (value) {
-                                setState(() => _rememberMe = value ?? true);
+                            : () {
+                                setState(
+                                  () => _confirmPasswordVisible =
+                                      !_confirmPasswordVisible,
+                                );
                               },
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Remember me',
-                        style: textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.ink,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0,
+                        icon: Icon(
+                          _confirmPasswordVisible
+                              ? Icons.visibility_off_rounded
+                              : Icons.visibility_rounded,
                         ),
                       ),
                     ),
-                    TextButton(
-                      onPressed: _busy ? null : _sendPasswordReset,
-                      child: const Text('Forgot password'),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
+                const SizedBox(height: 14),
+                if (_isSignUp)
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: Checkbox(
+                          value: _termsAccepted,
+                          onChanged: _busy
+                              ? null
+                              : (value) {
+                                  setState(
+                                    () => _termsAccepted = value ?? false,
+                                  );
+                                },
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'I agree to the KTMS account terms.',
+                          style: textTheme.bodyMedium?.copyWith(
+                            color: AppTheme.ink,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0,
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  Row(
+                    children: [
+                      SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: Checkbox(
+                          value: _rememberMe,
+                          onChanged: _busy
+                              ? null
+                              : (value) {
+                                  setState(() => _rememberMe = value ?? true);
+                                },
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Remember me',
+                          style: textTheme.bodyMedium?.copyWith(
+                            color: AppTheme.ink,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0,
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: _busy ? null : _sendPasswordReset,
+                        child: const Text('Forgot password'),
+                      ),
+                    ],
+                  ),
                 const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,
@@ -308,8 +482,16 @@ class _LoginPageState extends State<LoginPage> {
                               color: Colors.white,
                             ),
                           )
-                        : const Icon(Icons.login_rounded),
-                    label: Text(_emailBusy ? 'Signing in' : 'Sign in'),
+                        : Icon(
+                            _isSignUp
+                                ? Icons.person_add_alt_1_rounded
+                                : Icons.login_rounded,
+                          ),
+                    label: Text(
+                      _emailBusy
+                          ? (_isSignUp ? 'Creating account' : 'Signing in')
+                          : (_isSignUp ? 'Create account' : 'Sign in'),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -326,7 +508,26 @@ class _LoginPageState extends State<LoginPage> {
                           )
                         : const Icon(Icons.g_mobiledata_rounded, size: 30),
                     label: Text(
-                      _googleBusy ? 'Opening Google' : 'Continue with Google',
+                      _googleBusy
+                          ? 'Opening Google'
+                          : (_isSignUp
+                                ? 'Sign up with Google'
+                                : 'Continue with Google'),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Center(
+                  child: TextButton(
+                    onPressed: _busy
+                        ? null
+                        : () => _setMode(
+                            _isSignUp ? _AuthMode.signIn : _AuthMode.signUp,
+                          ),
+                    child: Text(
+                      _isSignUp
+                          ? 'Already have an account? Sign in'
+                          : 'Need an account? Create one',
                     ),
                   ),
                 ),
