@@ -1,17 +1,18 @@
-# ktms_frontend
+# KTMS Frontend
 
-A new Flutter project.
+Flutter workspace for the KTMS web and mobile client.
 
-## Getting Started
+## Local API
 
-This project is a starting point for a Flutter application.
+Master screens save through the FastAPI backend. Flutter does not connect to
+PostgreSQL directly.
 
-A few resources to get you started if this is your first Flutter project:
+Run against a local API:
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+```bash
+cd /Users/robert/kcastle/codex/ktms/frontend
+flutter run -d chrome --dart-define=KTMS_API_BASE_URL=http://127.0.0.1:8000/api
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+For production web builds, serve the backend under the same domain `/api` or
+pass the deployed API URL with `--dart-define=KTMS_API_BASE_URL=...`.

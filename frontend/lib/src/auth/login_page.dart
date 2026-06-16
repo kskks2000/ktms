@@ -2,7 +2,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../design/app_theme.dart';
+import '../design/ktms_mark.dart';
 import '../features/dashboard/signed_in_page.dart';
+import '../features/carrier/carrier_home_page.dart';
+import '../features/driver/driver_home_page.dart';
 import 'auth_service.dart';
 
 enum _AuthMode { signIn, signUp }
@@ -103,6 +106,33 @@ class _LoginPageState extends State<LoginPage> {
 
     setState(() => _googleBusy = false);
     _showResult(result);
+  }
+
+  void _openDriverApp() {
+    FocusScope.of(context).unfocus();
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => DriverHomePage(
+          displayName: '김도윤',
+          email: 'driver@kcastle.net',
+          onSignOut: () => Navigator.of(context).pop(),
+        ),
+      ),
+    );
+  }
+
+  void _openCarrierPortal() {
+    FocusScope.of(context).unfocus();
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => CarrierHomePage(
+          displayName: '박지훈',
+          email: 'carrier@cjlogistics.example',
+          carrierName: 'CJ대한통운',
+          onSignOut: () => Navigator.of(context).pop(),
+        ),
+      ),
+    );
   }
 
   Future<void> _sendPasswordReset() async {
@@ -236,7 +266,7 @@ class _LoginPageState extends State<LoginPage> {
               children: [
                 Row(
                   children: [
-                    const _KtmsMark(size: 44),
+                    const KtmsMark(size: 44),
                     const SizedBox(width: 14),
                     Expanded(
                       child: Column(
@@ -516,6 +546,24 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _busy ? null : _openDriverApp,
+                    icon: const Icon(Icons.local_shipping_rounded),
+                    label: const Text('기사 앱으로 시작'),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _busy ? null : _openCarrierPortal,
+                    icon: const Icon(Icons.business_center_rounded),
+                    label: const Text('운송사 포털로 시작'),
+                  ),
+                ),
                 const SizedBox(height: 18),
                 Center(
                   child: TextButton(
@@ -661,7 +709,7 @@ class _VisualPanel extends StatelessWidget {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const _KtmsMark(size: 48, inverse: true),
+                        const KtmsMark(size: 48, inverse: true),
                         const SizedBox(width: 14),
                         Text(
                           'KTMS',
@@ -788,71 +836,5 @@ class _DividerLabel extends StatelessWidget {
         const Expanded(child: Divider(color: AppTheme.line)),
       ],
     );
-  }
-}
-
-class _KtmsMark extends StatelessWidget {
-  const _KtmsMark({required this.size, this.inverse = false});
-
-  final double size;
-  final bool inverse;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: inverse
-            ? Colors.white.withValues(alpha: 0.12)
-            : AppTheme.graphite,
-        borderRadius: BorderRadius.circular(8),
-        border: inverse
-            ? Border.all(color: Colors.white.withValues(alpha: 0.22))
-            : Border.all(color: AppTheme.graphite),
-      ),
-      child: CustomPaint(painter: _RouteMarkPainter(inverse: inverse)),
-    );
-  }
-}
-
-class _RouteMarkPainter extends CustomPainter {
-  const _RouteMarkPainter({required this.inverse});
-
-  final bool inverse;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final linePaint = Paint()
-      ..color = inverse ? Colors.white : AppTheme.cyan
-      ..strokeWidth = 2
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-
-    final accentPaint = Paint()
-      ..color = AppTheme.amber
-      ..style = PaintingStyle.fill;
-
-    final path = Path()
-      ..moveTo(size.width * 0.23, size.height * 0.68)
-      ..lineTo(size.width * 0.42, size.height * 0.43)
-      ..lineTo(size.width * 0.62, size.height * 0.58)
-      ..lineTo(size.width * 0.78, size.height * 0.31);
-
-    canvas.drawPath(path, linePaint);
-
-    for (final offset in <Offset>[
-      Offset(size.width * 0.23, size.height * 0.68),
-      Offset(size.width * 0.42, size.height * 0.43),
-      Offset(size.width * 0.62, size.height * 0.58),
-      Offset(size.width * 0.78, size.height * 0.31),
-    ]) {
-      canvas.drawCircle(offset, size.width * 0.055, accentPaint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _RouteMarkPainter oldDelegate) {
-    return oldDelegate.inverse != inverse;
   }
 }

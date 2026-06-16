@@ -37,6 +37,8 @@ dependencies:
   firebase_core: ^4.10.0
   firebase_auth: ^6.5.2
   google_sign_in: ^7.2.0
+  http: ^1.5.0
+  web: ^1.1.1
 
 dev_dependencies:
   flutter_test:
@@ -62,6 +64,18 @@ flutter:
 
   assets:
     - assets/images/ktms-login-hero.png
+    - assets/branding/ktms-app-icon-1024.png
+    - assets/branding/ktms-app-icon-readable-20260614.png
+    - assets/branding/ktms-app-icon-bright-20260614.png
+    - assets/branding/ktms-app-icon-simple-20260614.png
+    - assets/branding/ktms-app-icon-k-20260614.png
+    - assets/branding/ktms-app-icon-kmark-20260614.png
+    - assets/branding/ktms-app-icon-kflow-20260614.png
+    - assets/branding/ktms-app-icon-ksignature-20260614.png
+    - assets/branding/ktms-app-icon-selected-20260614.png
+    - assets/branding/ktms-app-icon-truck-20260614.png
+    - assets/branding/ktms-app-icon-final-route-20260614.png
+    - assets/branding/ktms-app-icon-final-route-smooth-20260614.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

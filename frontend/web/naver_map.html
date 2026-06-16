@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KTMS Naver Map</title>
+  <style>
+    html,
+    body,
+    #map {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #eaf4f6;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .map-error {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      box-sizing: border-box;
+      background: linear-gradient(135deg, #eaf4f6 0%, #d8f3ef 100%);
+      color: #172033;
+      text-align: center;
+      font-weight: 800;
+      line-height: 1.45;
+    }
+
+    .marker {
+      min-width: 26px;
+      height: 26px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      border: 3px solid #ffffff;
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.22);
+      color: #ffffff;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .marker.origin {
+      background: #0f766e;
+    }
+
+    .marker.stop {
+      background: #0891b2;
+    }
+
+    .marker.destination {
+      background: #f59e0b;
+    }
+
+    .vehicle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px 6px 7px;
+      border-radius: 8px;
+      border: 1px solid rgba(15, 118, 110, 0.22);
+      background: rgba(255, 255, 255, 0.96);
+      box-shadow: 0 14px 30px rgba(15, 23, 42, 0.22);
+      color: #111827;
+      font-size: 12px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .vehicle-truck {
+      width: 38px;
+      height: 24px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      background: rgba(15, 118, 110, 0.14);
+      box-shadow: 0 0 0 5px rgba(15, 118, 110, 0.08);
+      flex: 0 0 auto;
+    }
+
+    .vehicle-truck svg {
+      width: 34px;
+      height: 22px;
+      display: block;
+      filter: drop-shadow(0 3px 5px rgba(15, 23, 42, 0.20));
+    }
+
+    .hud {
+      position: absolute;
+      left: 12px;
+      bottom: 12px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      pointer-events: none;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      padding: 0 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(8, 145, 178, 0.22);
+      background: rgba(255, 255, 255, 0.94);
+      color: #111827;
+      font-size: 12px;
+      font-weight: 900;
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div id="error" class="map-error"></div>
+  <div class="hud">
+    <div class="chip" id="statusChip">Naver Map</div>
+    <div class="chip" id="etaChip">ETA</div>
+  </div>
+
+  <script>
+    const NAVER_MAP_CLIENT_ID = 'acagwfvm43';
+
+    const params = new URLSearchParams(window.location.search);
+    const getParam = (name, fallback = '') => params.get(name) || fallback;
+    const routePoints = getParam('points')
+      .split('|')
+      .filter(Boolean)
+      .map((value) => {
+        const [lat, lng] = value.split(',').map(Number);
+        return { lat, lng };
+      })
+      .filter((point) => Number.isFinite(point.lat) && Number.isFinite(point.lng));
+    const labels = getParam('labels').split('|');
+    const times = getParam('times').split('|');
+    const progress = Math.max(0, Math.min(1, Number(getParam('progress', '0')) || 0));
+    const vehicle = getParam('vehicle', '차량');
+    const status = getParam('status', '운송중');
+    const eta = getParam('eta', '-');
+
+    document.getElementById('statusChip').textContent = `${vehicle} · ${status}`;
+    document.getElementById('etaChip').textContent = `ETA ${eta}`;
+
+    function showError(message) {
+      const error = document.getElementById('error');
+      error.textContent = message;
+      error.style.display = 'flex';
+    }
+
+    function loadNaverMap() {
+      if (!routePoints.length) {
+        showError('표시할 운송 경로 좌표가 없습니다.');
+        return;
+      }
+
+      window.navermap_authFailure = () => {
+        showError('네이버 지도 인증에 실패했습니다. Naver Cloud의 Web 서비스 URL에 http://www.kcastle.net 과 http://kcastle.net 을 모두 등록해주세요.');
+      };
+      window.ktmsInitNaverMap = () => waitForNaverMap(0);
+      const script = document.createElement('script');
+      script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${encodeURIComponent(NAVER_MAP_CLIENT_ID)}&callback=ktmsInitNaverMap`;
+      script.async = true;
+      script.onerror = () => showError('Naver Map을 불러오지 못했습니다. Web 서비스 URL에 www.kcastle.net 등록 여부를 확인해주세요.');
+      document.head.appendChild(script);
+    }
+
+    function waitForNaverMap(attempt) {
+      if (window.naver && window.naver.maps && window.naver.maps.Map) {
+        renderMap();
+        return;
+      }
+      if (attempt >= 80) {
+        showError('Naver Map 객체를 초기화하지 못했습니다. 잠시 후 새로고침하거나 Web 서비스 URL 등록 상태를 확인해주세요.');
+        return;
+      }
+      window.setTimeout(() => waitForNaverMap(attempt + 1), 50);
+    }
+
+    function renderMap() {
+      const naverPoints = routePoints.map(
+        (point) => new naver.maps.LatLng(point.lat, point.lng),
+      );
+      const center = routePoints.reduce(
+        (sum, point) => ({
+          lat: sum.lat + point.lat / routePoints.length,
+          lng: sum.lng + point.lng / routePoints.length,
+        }),
+        { lat: 0, lng: 0 },
+      );
+
+      const map = new naver.maps.Map('map', {
+        center: new naver.maps.LatLng(center.lat, center.lng),
+        zoom: 9,
+        minZoom: 6,
+        mapTypeControl: false,
+        zoomControl: true,
+        zoomControlOptions: {
+          position: naver.maps.Position.TOP_RIGHT,
+        },
+        scaleControl: true,
+        logoControl: true,
+      });
+
+      const bounds = new naver.maps.LatLngBounds();
+      naverPoints.forEach((point) => bounds.extend(point));
+      if (naverPoints.length > 1) {
+        map.fitBounds(bounds, { top: 70, right: 46, bottom: 64, left: 46 });
+      }
+
+      new naver.maps.Polyline({
+        map,
+        path: naverPoints,
+        strokeColor: '#0891b2',
+        strokeOpacity: 0.55,
+        strokeWeight: 7,
+        strokeLineCap: 'round',
+        strokeLineJoin: 'round',
+      });
+
+      new naver.maps.Polyline({
+        map,
+        path: completedPath(routePoints, progress).map(
+          (point) => new naver.maps.LatLng(point.lat, point.lng),
+        ),
+        strokeColor: '#0f766e',
+        strokeOpacity: 0.95,
+        strokeWeight: 7,
+        strokeLineCap: 'round',
+        strokeLineJoin: 'round',
+      });
+
+      naverPoints.forEach((point, index) => {
+        const markerType = index === 0
+          ? 'origin'
+          : index === naverPoints.length - 1
+            ? 'destination'
+            : 'stop';
+        const label = labels[index] || `지점 ${index + 1}`;
+        const time = times[index] ? ` · ${times[index]}` : '';
+        new naver.maps.Marker({
+          map,
+          position: point,
+          title: `${label}${time}`,
+          icon: {
+            content: `<div class="marker ${markerType}">${index + 1}</div>`,
+            size: new naver.maps.Size(32, 32),
+            anchor: new naver.maps.Point(16, 16),
+          },
+        });
+      });
+
+      const vehiclePoint = pointAlongRoute(routePoints, progress);
+      new naver.maps.Marker({
+        map,
+        position: new naver.maps.LatLng(vehiclePoint.lat, vehiclePoint.lng),
+        title: `${vehicle} · ${status}`,
+        icon: {
+          content: vehicleMarkerContent(vehicle),
+          size: new naver.maps.Size(178, 40),
+          anchor: new naver.maps.Point(24, 20),
+        },
+        zIndex: 100,
+      });
+    }
+
+    function vehicleMarkerContent(vehicleLabel) {
+      return `
+        <div class="vehicle">
+          <span class="vehicle-truck" aria-hidden="true">
+            <svg viewBox="0 0 56 32" focusable="false">
+              <path d="M4.5 8.5c0-1.7 1.3-3 3-3h27.8c1.7 0 3 1.3 3 3v12.1H4.5V8.5z" fill="#0f766e"/>
+              <path d="M38.3 12.2h7.1c1 0 1.9.5 2.5 1.3l4 5.8v5.1H38.3V12.2z" fill="#0d9488"/>
+              <path d="M42 14.9h3.1c.5 0 1 .3 1.3.7l2.1 3.1H42v-3.8z" fill="#d9fbf4"/>
+              <path d="M8.1 9.8h26.4" stroke="#d9fbf4" stroke-width="1.8" stroke-linecap="round" opacity=".75"/>
+              <path d="M4.5 20.6h47.4v3.8H4.5v-3.8z" fill="#0f766e"/>
+              <circle cx="14.2" cy="25.2" r="4.2" fill="#172033"/>
+              <circle cx="41.2" cy="25.2" r="4.2" fill="#172033"/>
+              <circle cx="14.2" cy="25.2" r="1.6" fill="#f8fafc"/>
+              <circle cx="41.2" cy="25.2" r="1.6" fill="#f8fafc"/>
+              <path d="M51.3 20.1h2.2" stroke="#f8fafc" stroke-width="1.7" stroke-linecap="round"/>
+            </svg>
+          </span>
+          <span>${escapeHtml(vehicleLabel)}</span>
+        </div>
+      `;
+    }
+
+    function completedPath(points, progressValue) {
+      if (points.length <= 1) {
+        return points;
+      }
+      const result = [points[0]];
+      const total = routeDistance(points);
+      let remaining = total * progressValue;
+
+      for (let index = 0; index < points.length - 1; index += 1) {
+        const start = points[index];
+        const end = points[index + 1];
+        const segment = distance(start, end);
+        if (remaining >= segment) {
+          result.push(end);
+          remaining -= segment;
+        } else {
+          const ratio = segment === 0 ? 0 : remaining / segment;
+          result.push({
+            lat: start.lat + (end.lat - start.lat) * ratio,
+            lng: start.lng + (end.lng - start.lng) * ratio,
+          });
+          break;
+        }
+      }
+      return result;
+    }
+
+    function pointAlongRoute(points, progressValue) {
+      return completedPath(points, progressValue).slice(-1)[0] || points[0];
+    }
+
+    function routeDistance(points) {
+      let total = 0;
+      for (let index = 0; index < points.length - 1; index += 1) {
+        total += distance(points[index], points[index + 1]);
+      }
+      return total;
+    }
+
+    function distance(a, b) {
+      const lat = a.lat - b.lat;
+      const lng = a.lng - b.lng;
+      return Math.sqrt(lat * lat + lng * lng);
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    loadNaverMap();
+  </script>
+</body>
+</html>

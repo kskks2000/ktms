@@ -9,6 +9,7 @@ backend/.env.*
 # Python
 __pycache__/
 *.py[cod]
+*.egg-info/
 .venv/
 
 # Flutter/Dart

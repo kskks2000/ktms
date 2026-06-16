@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../../design/app_theme.dart';
+import '../../design/ktms_mark.dart';
+import 'dispatch_planning_page.dart';
+import 'execution_tracking_page.dart';
+import 'load_planning_page.dart';
+import 'master_registration_page.dart';
+import 'order_registration_page.dart';
+import 'performance_settlement_page.dart';
 
 class TmsHomePage extends StatefulWidget {
   const TmsHomePage({
@@ -79,8 +86,17 @@ class _DesktopShell extends StatelessWidget {
           Expanded(
             child: Column(
               children: [
-                _TopBar(displayName: displayName),
-                const Expanded(child: _ControlDashboard()),
+                _TopBar(
+                  displayName: displayName,
+                  selectedIndex: selectedIndex,
+                  onSelect: onSelect,
+                ),
+                Expanded(
+                  child: _WorkspaceContent(
+                    selectedIndex: selectedIndex,
+                    onSelect: onSelect,
+                  ),
+                ),
               ],
             ),
           ),
@@ -116,7 +132,7 @@ class _MobileShell extends StatelessWidget {
         titleSpacing: 16,
         title: const Row(
           children: [
-            _KtmsLogoMark(size: 34),
+            KtmsMark(size: 34),
             SizedBox(width: 10),
             Text(
               'KTMS',
@@ -142,9 +158,13 @@ class _MobileShell extends StatelessWidget {
           const SizedBox(width: 6),
         ],
       ),
-      body: const _ControlDashboard(compact: true),
+      body: _WorkspaceContent(
+        selectedIndex: selectedIndex,
+        compact: true,
+        onSelect: onSelect,
+      ),
       bottomNavigationBar: NavigationBar(
-        selectedIndex: selectedIndex.clamp(0, 3),
+        selectedIndex: selectedIndex.clamp(0, 4),
         onDestinationSelected: onSelect,
         height: 68,
         destinations: _mobileNavItems
@@ -192,7 +212,7 @@ class _SideNavigation extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(22, 18, 22, 18),
               child: Row(
                 children: [
-                  const _KtmsLogoMark(size: 42),
+                  const KtmsMark(size: 42),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -367,12 +387,52 @@ class _NavigationTile extends StatelessWidget {
 }
 
 class _TopBar extends StatelessWidget {
-  const _TopBar({required this.displayName});
+  const _TopBar({
+    required this.displayName,
+    required this.selectedIndex,
+    required this.onSelect,
+  });
 
   final String displayName;
+  final int selectedIndex;
+  final ValueChanged<int> onSelect;
 
   @override
   Widget build(BuildContext context) {
+    final masterModule = _masterModuleForSelectedIndex(selectedIndex);
+    final title = selectedIndex == 1
+        ? '오더 등록'
+        : selectedIndex == 2
+        ? '편성/상차조합'
+        : selectedIndex == 3
+        ? '배정/배차'
+        : selectedIndex == 4
+        ? '실행 트래킹'
+        : selectedIndex == 5
+        ? '실적 확정'
+        : selectedIndex == 6
+        ? '정산 관리'
+        : masterModule == null
+        ? 'TMS 운영 관제'
+        : masterModule == MasterModule.partner
+        ? '마스터 등록'
+        : masterModule.title;
+    final subtitle = selectedIndex == 1
+        ? '고객사, 화주, 상하차지, 품목, 운송조건, 청구운임'
+        : selectedIndex == 2
+        ? '미편성 오더를 상차조합으로 묶고 적재율, 시간창, SLA를 검토'
+        : selectedIndex == 3
+        ? '확정 조합을 운송사, 차량, 기사에 배정하고 배차지시 발행'
+        : selectedIndex == 4
+        ? '네이버 지도 기반 차량 위치, 운송 경로, 출발/도착 이벤트 관제'
+        : selectedIndex == 5
+        ? '운송 완료 실적, POD, 온도/도착 차이를 검토해 정산 기준 확정'
+        : selectedIndex == 6
+        ? '매출정산과 매입정산을 분리해 거래명세서와 지급 기준 생성'
+        : masterModule == null
+        ? '오더 등록부터 배차 실행, 실적 확정, 정산까지'
+        : '고객사, 화주, 운송사, 배송처, 권역/노선, 차량, 기사, 창고/거점 기준정보';
+
     return Container(
       height: 76,
       decoration: const BoxDecoration(
@@ -389,7 +449,7 @@ class _TopBar extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'TMS 운영 관제',
+                    title,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       color: AppTheme.graphite,
                       fontWeight: FontWeight.w900,
@@ -398,7 +458,7 @@ class _TopBar extends StatelessWidget {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    '오더 등록부터 배차 실행, 실적 확정, 정산까지',
+                    subtitle,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: AppTheme.slate,
                       fontWeight: FontWeight.w700,
@@ -412,19 +472,19 @@ class _TopBar extends StatelessWidget {
               icon: Icons.add_road_rounded,
               label: '오더 등록',
               filled: true,
-              onPressed: () {},
+              onPressed: () => onSelect(1),
             ),
             const SizedBox(width: 10),
             _QuickCommandButton(
               icon: Icons.alt_route_rounded,
               label: '상차조합',
-              onPressed: () {},
+              onPressed: () => onSelect(2),
             ),
             const SizedBox(width: 10),
             _QuickCommandButton(
               icon: Icons.local_shipping_rounded,
               label: '배차 생성',
-              onPressed: () {},
+              onPressed: () => onSelect(3),
             ),
             const SizedBox(width: 18),
             _IconAction(icon: Icons.search_rounded, tooltip: '검색'),
@@ -441,10 +501,69 @@ class _TopBar extends StatelessWidget {
   }
 }
 
+class _WorkspaceContent extends StatelessWidget {
+  const _WorkspaceContent({
+    required this.selectedIndex,
+    required this.onSelect,
+    this.compact = false,
+  });
+
+  final int selectedIndex;
+  final ValueChanged<int> onSelect;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final masterModule = _masterModuleForSelectedIndex(
+      selectedIndex,
+      compact: compact,
+    );
+    if (masterModule != null) {
+      return MasterRegistrationPage(
+        compact: compact,
+        initialModule: masterModule,
+      );
+    }
+
+    if (selectedIndex == 1) {
+      return OrderRegistrationPage(compact: compact);
+    }
+
+    if (selectedIndex == 2) {
+      return LoadPlanningPage(compact: compact);
+    }
+
+    if (selectedIndex == 3) {
+      return DispatchPlanningPage(compact: compact);
+    }
+
+    if (selectedIndex == 4) {
+      return ExecutionTrackingPage(compact: compact);
+    }
+
+    if (selectedIndex == 5) {
+      return PerformanceSettlementPage(
+        compact: compact,
+        initialTab: SettlementWorkspaceTab.performance,
+      );
+    }
+
+    if (selectedIndex == 6) {
+      return PerformanceSettlementPage(
+        compact: compact,
+        initialTab: SettlementWorkspaceTab.revenue,
+      );
+    }
+
+    return _ControlDashboard(compact: compact, onMasterSelect: onSelect);
+  }
+}
+
 class _ControlDashboard extends StatelessWidget {
-  const _ControlDashboard({this.compact = false});
+  const _ControlDashboard({required this.onMasterSelect, this.compact = false});
 
   final bool compact;
+  final ValueChanged<int> onMasterSelect;
 
   @override
   Widget build(BuildContext context) {
@@ -461,7 +580,7 @@ class _ControlDashboard extends StatelessWidget {
           if (compact) ...[
             const _MobileHero(),
             const SizedBox(height: 16),
-            const _MobileActionRail(),
+            _MobileActionRail(onSelect: onMasterSelect),
             const SizedBox(height: 16),
           ],
           const _MetricStrip(),
@@ -472,21 +591,26 @@ class _ControlDashboard extends StatelessWidget {
             builder: (context, constraints) {
               final twoColumn = constraints.maxWidth >= 1180;
               if (!twoColumn) {
-                return const Column(
+                return Column(
                   children: [
-                    _OperationsBoard(),
-                    SizedBox(height: 18),
-                    _TrackingPanel(),
+                    const _OperationsBoard(),
+                    const SizedBox(height: 18),
+                    _TrackingPanel(onOpenTracking: () => onMasterSelect(4)),
                   ],
                 );
               }
 
-              return const Row(
+              return Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(flex: 13, child: _OperationsBoard()),
-                  SizedBox(width: 18),
-                  Expanded(flex: 9, child: _TrackingPanel()),
+                  const Expanded(flex: 13, child: _OperationsBoard()),
+                  const SizedBox(width: 18),
+                  Expanded(
+                    flex: 9,
+                    child: _TrackingPanel(
+                      onOpenTracking: () => onMasterSelect(4),
+                    ),
+                  ),
                 ],
               );
             },
@@ -496,21 +620,24 @@ class _ControlDashboard extends StatelessWidget {
             builder: (context, constraints) {
               final twoColumn = constraints.maxWidth >= 1180;
               if (!twoColumn) {
-                return const Column(
+                return Column(
                   children: [
-                    _SettlementPanel(),
-                    SizedBox(height: 18),
-                    _MasterDirectory(),
+                    const _SettlementPanel(),
+                    const SizedBox(height: 18),
+                    _MasterDirectory(onMasterSelect: onMasterSelect),
                   ],
                 );
               }
 
-              return const Row(
+              return Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(flex: 10, child: _SettlementPanel()),
-                  SizedBox(width: 18),
-                  Expanded(flex: 12, child: _MasterDirectory()),
+                  const Expanded(flex: 10, child: _SettlementPanel()),
+                  const SizedBox(width: 18),
+                  Expanded(
+                    flex: 12,
+                    child: _MasterDirectory(onMasterSelect: onMasterSelect),
+                  ),
                 ],
               );
             },
@@ -555,7 +682,9 @@ class _MobileHero extends StatelessWidget {
 }
 
 class _MobileActionRail extends StatelessWidget {
-  const _MobileActionRail();
+  const _MobileActionRail({required this.onSelect});
+
+  final ValueChanged<int> onSelect;
 
   @override
   Widget build(BuildContext context) {
@@ -568,22 +697,27 @@ class _MobileActionRail extends StatelessWidget {
             icon: Icons.add_road_rounded,
             label: '오더 등록',
             selected: true,
-            onTap: () {},
+            onTap: () => onSelect(1),
           ),
           _ActionChipButton(
             icon: Icons.alt_route_rounded,
             label: '상차조합',
-            onTap: () {},
+            onTap: () => onSelect(2),
           ),
           _ActionChipButton(
             icon: Icons.assignment_ind_rounded,
             label: '배정',
-            onTap: () {},
+            onTap: () => onSelect(3),
+          ),
+          _ActionChipButton(
+            icon: Icons.map_rounded,
+            label: '실행',
+            onTap: () => onSelect(4),
           ),
           _ActionChipButton(
             icon: Icons.payments_rounded,
             label: '정산',
-            onTap: () {},
+            onTap: () => onSelect(6),
           ),
         ],
       ),
@@ -895,29 +1029,43 @@ class _PlanTaskRow extends StatelessWidget {
 }
 
 class _TrackingPanel extends StatelessWidget {
-  const _TrackingPanel();
+  const _TrackingPanel({required this.onOpenTracking});
+
+  final VoidCallback onOpenTracking;
 
   @override
   Widget build(BuildContext context) {
-    return _Panel(
-      padding: const EdgeInsets.all(18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const _PanelHeader(
-            icon: Icons.map_rounded,
-            title: '실행 트래킹',
-            subtitle: '출발, 도착, 완료 이벤트 모니터링',
+    return Semantics(
+      button: true,
+      label: '실행 트래킹 열기',
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(8),
+        child: InkWell(
+          onTap: onOpenTracking,
+          borderRadius: BorderRadius.circular(8),
+          child: _Panel(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const _PanelHeader(
+                  icon: Icons.map_rounded,
+                  title: '실행 트래킹',
+                  subtitle: '출발, 도착, 완료 이벤트 모니터링',
+                ),
+                const SizedBox(height: 16),
+                const _MapPreview(),
+                const SizedBox(height: 16),
+                for (final event in _routeEvents) ...[
+                  _RouteEventRow(event: event),
+                  if (event != _routeEvents.last)
+                    const Divider(height: 18, color: AppTheme.line),
+                ],
+              ],
+            ),
           ),
-          const SizedBox(height: 16),
-          const _MapPreview(),
-          const SizedBox(height: 16),
-          for (final event in _routeEvents) ...[
-            _RouteEventRow(event: event),
-            if (event != _routeEvents.last)
-              const Divider(height: 18, color: AppTheme.line),
-          ],
-        ],
+        ),
       ),
     );
   }
@@ -1200,7 +1348,9 @@ class _LedgerRow extends StatelessWidget {
 }
 
 class _MasterDirectory extends StatelessWidget {
-  const _MasterDirectory();
+  const _MasterDirectory({required this.onMasterSelect});
+
+  final ValueChanged<int> onMasterSelect;
 
   @override
   Widget build(BuildContext context) {
@@ -1229,7 +1379,14 @@ class _MasterDirectory extends StatelessWidget {
                     .map(
                       (item) => SizedBox(
                         width: width,
-                        child: _MasterTile(item: item),
+                        child: _MasterTile(
+                          item: item,
+                          onTap: item.navOffset == null
+                              ? null
+                              : () => onMasterSelect(
+                                  _masterNavStartIndex + item.navOffset!,
+                                ),
+                        ),
                       ),
                     )
                     .toList(),
@@ -1243,9 +1400,10 @@ class _MasterDirectory extends StatelessWidget {
 }
 
 class _MasterTile extends StatelessWidget {
-  const _MasterTile({required this.item});
+  const _MasterTile({required this.item, required this.onTap});
 
   final _MasterItem item;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -1254,7 +1412,7 @@ class _MasterTile extends StatelessWidget {
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
         borderRadius: BorderRadius.circular(8),
-        onTap: () {},
+        onTap: onTap,
         child: Container(
           height: 82,
           padding: const EdgeInsets.all(12),
@@ -1281,11 +1439,12 @@ class _MasterTile extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const Icon(
-                    Icons.add_circle_outline_rounded,
-                    color: AppTheme.muted,
-                    size: 18,
-                  ),
+                  if (onTap != null)
+                    const Icon(
+                      Icons.arrow_forward_rounded,
+                      color: AppTheme.muted,
+                      size: 18,
+                    ),
                 ],
               ),
             ],
@@ -1588,62 +1747,6 @@ class _Badge extends StatelessWidget {
   }
 }
 
-class _KtmsLogoMark extends StatelessWidget {
-  const _KtmsLogoMark({required this.size});
-
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: AppTheme.graphite,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: CustomPaint(painter: const _RouteMarkPainter()),
-    );
-  }
-}
-
-class _RouteMarkPainter extends CustomPainter {
-  const _RouteMarkPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final linePaint = Paint()
-      ..color = AppTheme.cyan
-      ..strokeWidth = 2
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-
-    final accentPaint = Paint()
-      ..color = AppTheme.amber
-      ..style = PaintingStyle.fill;
-
-    final path = Path()
-      ..moveTo(size.width * 0.22, size.height * 0.68)
-      ..lineTo(size.width * 0.42, size.height * 0.42)
-      ..lineTo(size.width * 0.62, size.height * 0.58)
-      ..lineTo(size.width * 0.78, size.height * 0.3);
-
-    canvas.drawPath(path, linePaint);
-
-    for (final offset in <Offset>[
-      Offset(size.width * 0.22, size.height * 0.68),
-      Offset(size.width * 0.42, size.height * 0.42),
-      Offset(size.width * 0.62, size.height * 0.58),
-      Offset(size.width * 0.78, size.height * 0.3),
-    ]) {
-      canvas.drawCircle(offset, size.width * 0.055, accentPaint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _RouteMarkPainter oldDelegate) => false;
-}
-
 class _MapPreviewPainter extends CustomPainter {
   const _MapPreviewPainter();
 
@@ -1821,11 +1924,36 @@ class _MasterItem {
     required this.label,
     required this.icon,
     required this.color,
+    this.navOffset,
   });
 
   final String label;
   final IconData icon;
   final Color color;
+  final int? navOffset;
+}
+
+int get _masterNavStartIndex =>
+    _primaryNavItems.length + _businessNavItems.length;
+
+MasterModule? _masterModuleForSelectedIndex(
+  int selectedIndex, {
+  bool compact = false,
+}) {
+  final relativeIndex = selectedIndex - _masterNavStartIndex;
+  return switch (relativeIndex) {
+    0 => MasterModule.partner,
+    1 => MasterModule.deliveryDestination,
+    2 => MasterModule.routeZone,
+    3 => MasterModule.vehicle,
+    4 => MasterModule.driver,
+    5 => MasterModule.warehouseHub,
+    6 => MasterModule.item,
+    7 => MasterModule.freightContract,
+    8 => MasterModule.userAccess,
+    9 => MasterModule.commonCode,
+    _ => null,
+  };
 }
 
 const _primaryNavItems = [
@@ -1888,9 +2016,49 @@ const _masterNavItems = [
     selectedIcon: Icons.dataset_rounded,
   ),
   _NavItem(
+    label: '배송처 마스터',
+    icon: Icons.store_mall_directory_outlined,
+    selectedIcon: Icons.store_mall_directory_rounded,
+  ),
+  _NavItem(
+    label: '권역/노선 마스터',
+    icon: Icons.alt_route_outlined,
+    selectedIcon: Icons.alt_route_rounded,
+  ),
+  _NavItem(
+    label: '차량 마스터',
+    icon: Icons.fire_truck_outlined,
+    selectedIcon: Icons.fire_truck_rounded,
+  ),
+  _NavItem(
+    label: '기사 마스터',
+    icon: Icons.badge_outlined,
+    selectedIcon: Icons.badge_rounded,
+  ),
+  _NavItem(
+    label: '창고/거점 마스터',
+    icon: Icons.warehouse_outlined,
+    selectedIcon: Icons.warehouse_rounded,
+  ),
+  _NavItem(
+    label: '품목 마스터',
+    icon: Icons.inventory_2_outlined,
+    selectedIcon: Icons.inventory_2_rounded,
+  ),
+  _NavItem(
+    label: '운임/계약 마스터',
+    icon: Icons.request_quote_outlined,
+    selectedIcon: Icons.request_quote_rounded,
+  ),
+  _NavItem(
     label: '사용자/권한',
     icon: Icons.admin_panel_settings_outlined,
     selectedIcon: Icons.admin_panel_settings_rounded,
+  ),
+  _NavItem(
+    label: '공통코드 마스터',
+    icon: Icons.tune_outlined,
+    selectedIcon: Icons.tune_rounded,
   ),
   _NavItem(
     label: '시스템 설정',
@@ -1911,14 +2079,19 @@ const _mobileNavItems = [
     selectedIcon: Icons.add_road_rounded,
   ),
   _NavItem(
+    label: '편성',
+    icon: Icons.alt_route_outlined,
+    selectedIcon: Icons.alt_route_rounded,
+  ),
+  _NavItem(
     label: '배차',
     icon: Icons.local_shipping_outlined,
     selectedIcon: Icons.local_shipping_rounded,
   ),
   _NavItem(
-    label: '마스터',
-    icon: Icons.dataset_outlined,
-    selectedIcon: Icons.dataset_rounded,
+    label: '실행',
+    icon: Icons.map_outlined,
+    selectedIcon: Icons.map_rounded,
   ),
 ];
 
@@ -2083,44 +2256,76 @@ const _ledgerItems = [
 ];
 
 const _masterItems = [
-  _MasterItem(label: '고객사', icon: Icons.business_rounded, color: AppTheme.teal),
-  _MasterItem(label: '화주', icon: Icons.apartment_rounded, color: AppTheme.cyan),
+  _MasterItem(
+    label: '고객사',
+    icon: Icons.business_rounded,
+    color: AppTheme.teal,
+    navOffset: 0,
+  ),
+  _MasterItem(
+    label: '화주',
+    icon: Icons.apartment_rounded,
+    color: AppTheme.cyan,
+    navOffset: 0,
+  ),
   _MasterItem(
     label: '배송처',
     icon: Icons.store_mall_directory_rounded,
     color: Color(0xFF2563EB),
+    navOffset: 1,
   ),
   _MasterItem(
     label: '운송사',
     icon: Icons.local_shipping_rounded,
     color: Color(0xFF7C3AED),
+    navOffset: 0,
   ),
   _MasterItem(
     label: '차량',
     icon: Icons.fire_truck_rounded,
     color: AppTheme.amber,
+    navOffset: 3,
   ),
-  _MasterItem(label: '기사', icon: Icons.badge_rounded, color: Color(0xFF16A34A)),
-  _MasterItem(label: '권역/노선', icon: Icons.map_rounded, color: AppTheme.cyan),
+  _MasterItem(
+    label: '기사',
+    icon: Icons.badge_rounded,
+    color: Color(0xFF16A34A),
+    navOffset: 4,
+  ),
+  _MasterItem(
+    label: '권역/노선',
+    icon: Icons.map_rounded,
+    color: AppTheme.cyan,
+    navOffset: 2,
+  ),
   _MasterItem(
     label: '품목',
     icon: Icons.inventory_2_rounded,
     color: AppTheme.teal,
+    navOffset: 6,
   ),
   _MasterItem(
     label: '운임/계약',
     icon: Icons.request_quote_rounded,
     color: AppTheme.amber,
+    navOffset: 7,
   ),
   _MasterItem(
     label: '창고/거점',
     icon: Icons.warehouse_rounded,
     color: Color(0xFF2563EB),
+    navOffset: 5,
   ),
   _MasterItem(
     label: '사용자/권한',
     icon: Icons.admin_panel_settings_rounded,
     color: Color(0xFF7C3AED),
+    navOffset: 8,
   ),
-  _MasterItem(label: '공통코드', icon: Icons.code_rounded, color: AppTheme.slate),
+  _MasterItem(
+    label: '공통코드',
+    icon: Icons.tune_rounded,
+    color: Color(0xFF2563EB),
+    navOffset: 9,
+  ),
 ];
