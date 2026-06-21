@@ -51,7 +51,10 @@ uvicorn app.main:app --reload
 
 - Deploy frontend web output from `frontend/build/web`.
 - Production verification target is `http://www.kcastle.net`.
-- Only deploy to production when the user asks for deployment or the task clearly requires it.
+- For any frontend, backend, or deployment-related code change, do not report the task as complete until the change has been deployed to `www.kcastle.net` by sFTP and tested on `http://www.kcastle.net`.
+- Always perform production verification on `http://www.kcastle.net` after the sFTP deployment before telling the user the work is complete.
+- Do not store sFTP hostnames beyond `www.kcastle.net`, usernames, passwords, keys, paths, or other deployment credentials in repository files.
+- For docs-only or agent-instruction-only changes, sFTP deployment and production testing are not required unless the user explicitly asks for them.
 - After deployment, verify that the served production bundle matches the local release build when practical.
 
 ## Verification

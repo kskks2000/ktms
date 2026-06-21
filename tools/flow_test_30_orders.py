@@ -11,6 +11,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
+from pathlib import Path
 from typing import Any
 
 import psycopg
@@ -18,7 +19,29 @@ from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
 
-BASE_URL = os.environ.get("KTMS_API_BASE_URL", "http://www.kcastle.net")
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+
+def load_env_file() -> None:
+    env_file = PROJECT_ROOT / ".env"
+    if not env_file.exists():
+        return
+
+    for raw_line in env_file.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+
+        key, value = line.split("=", 1)
+        key = key.strip()
+        if not key or key in os.environ:
+            continue
+        os.environ[key] = value.strip().strip('"').strip("'")
+
+
+load_env_file()
+
+BASE_URL = os.environ.get("KTMS_API_BASE_URL")
 SCHEMA = os.environ.get("KTMS_DB_SCHEMA", "ktms")
 CHANNEL = "FLOW_TEST"
 CLIENT = "codex-flow-test-30-orders"
@@ -40,6 +63,10 @@ def env_required(name: str) -> str:
     if not value:
         raise RuntimeError(f"{name} is required")
     return value
+
+
+if not BASE_URL:
+    raise RuntimeError("KTMS_API_BASE_URL is required")
 
 
 def connect() -> psycopg.Connection:

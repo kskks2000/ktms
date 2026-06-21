@@ -1,1 +1,2 @@
+#include? "KtmsEnv.xcconfig"
 #include "Generated.xcconfig"

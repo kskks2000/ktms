@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -14,25 +15,27 @@ class Settings(BaseSettings):
     )
 
     app_env: str = "local"
-    cors_origins: list[str] = [
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "http://localhost:8080",
-        "http://localhost:8000",
-        "http://127.0.0.1:8000",
-        "http://www.kcastle.net",
-        "https://www.kcastle.net",
-        "http://kcastle.net",
-        "https://kcastle.net",
-    ]
-    ktms_db_host: str = "localhost"
+    ktms_cors_origins: str
+    ktms_db_host: str
     ktms_db_port: int = 5432
-    ktms_db_name: str = "postgres"
-    ktms_db_user: str = "postgres"
-    ktms_db_password: str = ""
+    ktms_db_name: str
+    ktms_db_user: str
+    ktms_db_password: SecretStr
     ktms_db_schema: str = "ktms"
     ktms_default_tenant_code: str | None = None
     ktms_default_company_code: str | None = None
+
+    @property
+    def cors_origins(self) -> list[str]:
+        return [
+            origin.strip()
+            for origin in self.ktms_cors_origins.split(",")
+            if origin.strip()
+        ]
+
+    @property
+    def db_password(self) -> str:
+        return self.ktms_db_password.get_secret_value()
 
 
 settings = Settings()

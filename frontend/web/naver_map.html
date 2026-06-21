@@ -124,10 +124,9 @@
   </div>
 
   <script>
-    const NAVER_MAP_CLIENT_ID = 'acagwfvm43';
-
     const params = new URLSearchParams(window.location.search);
     const getParam = (name, fallback = '') => params.get(name) || fallback;
+    const naverMapClientId = getParam('ncpClientId').trim();
     const routePoints = getParam('points')
       .split('|')
       .filter(Boolean)
@@ -153,6 +152,11 @@
     }
 
     function loadNaverMap() {
+      if (!naverMapClientId) {
+        showError('네이버 지도 클라이언트 ID가 설정되지 않았습니다.');
+        return;
+      }
+
       if (!routePoints.length) {
         showError('표시할 운송 경로 좌표가 없습니다.');
         return;
@@ -163,7 +167,7 @@
       };
       window.ktmsInitNaverMap = () => waitForNaverMap(0);
       const script = document.createElement('script');
-      script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${encodeURIComponent(NAVER_MAP_CLIENT_ID)}&callback=ktmsInitNaverMap`;
+      script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${encodeURIComponent(naverMapClientId)}&callback=ktmsInitNaverMap`;
       script.async = true;
       script.onerror = () => showError('Naver Map을 불러오지 못했습니다. Web 서비스 URL에 www.kcastle.net 등록 여부를 확인해주세요.');
       document.head.appendChild(script);

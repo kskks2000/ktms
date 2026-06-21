@@ -3,6 +3,8 @@ import 'dart:ui_web' as ui_web;
 import 'package:flutter/widgets.dart';
 import 'package:web/web.dart' as web;
 
+import '../../config/app_config.dart';
+
 class NaverRoutePoint {
   const NaverRoutePoint({
     required this.label,
@@ -88,6 +90,7 @@ class _NaverRouteMapViewState extends State<NaverRouteMapView> {
         'vehicle': widget.vehicleLabel,
         'status': widget.statusLabel,
         'eta': widget.etaLabel,
+        'ncpClientId': AppConfig.naverMapClientId,
       },
     ).query;
     return 'naver_map.html?$query';

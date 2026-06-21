@@ -4,6 +4,8 @@ import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
+import 'src/config/app_config.dart';
+
 /// Default [FirebaseOptions] for use with your Firebase apps.
 ///
 /// Example:
@@ -47,29 +49,29 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyBGjJwtDX4QJVN9dwftvxT571ladNoEeDA',
-    appId: '1:244152480982:web:1e089fa5ecbf61d44d8577',
-    messagingSenderId: '244152480982',
-    projectId: 'ktms-60214',
-    authDomain: 'ktms-60214.firebaseapp.com',
-    storageBucket: 'ktms-60214.firebasestorage.app',
+    apiKey: AppConfig.firebaseWebApiKey,
+    appId: AppConfig.firebaseWebAppId,
+    messagingSenderId: AppConfig.firebaseMessagingSenderId,
+    projectId: AppConfig.firebaseProjectId,
+    authDomain: AppConfig.firebaseWebAuthDomain,
+    storageBucket: AppConfig.firebaseStorageBucket,
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDJsNTS9DUw1K53pg6u_6gQTcGt3PVB9Q4',
-    appId: '1:244152480982:android:9649333eb4296bcb4d8577',
-    messagingSenderId: '244152480982',
-    projectId: 'ktms-60214',
-    storageBucket: 'ktms-60214.firebasestorage.app',
+    apiKey: AppConfig.firebaseAndroidApiKey,
+    appId: AppConfig.firebaseAndroidAppId,
+    messagingSenderId: AppConfig.firebaseMessagingSenderId,
+    projectId: AppConfig.firebaseProjectId,
+    storageBucket: AppConfig.firebaseStorageBucket,
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyBYeTK8HAjzNVCcm9sg35gg7jRB-nU8jpU',
-    appId: '1:244152480982:ios:7d854616a78e0e3a4d8577',
-    messagingSenderId: '244152480982',
-    projectId: 'ktms-60214',
-    storageBucket: 'ktms-60214.firebasestorage.app',
-    iosClientId: '244152480982-l3iirma9hv3nrpr6bem3nv1khu1v8jl5.apps.googleusercontent.com',
-    iosBundleId: 'com.kcastle.ktmsFrontend',
+    apiKey: AppConfig.firebaseIosApiKey,
+    appId: AppConfig.firebaseIosAppId,
+    messagingSenderId: AppConfig.firebaseMessagingSenderId,
+    projectId: AppConfig.firebaseProjectId,
+    storageBucket: AppConfig.firebaseStorageBucket,
+    iosClientId: AppConfig.firebaseIosClientId,
+    iosBundleId: AppConfig.firebaseIosBundleId,
   );
 }

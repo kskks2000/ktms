@@ -29,7 +29,7 @@
 			<string>Editor</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>com.googleusercontent.apps.244152480982-l3iirma9hv3nrpr6bem3nv1khu1v8jl5</string>
+				<string>$(KTMS_FIREBASE_IOS_REVERSED_CLIENT_ID)</string>
 			</array>
 		</dict>
 	</array>

@@ -12,17 +12,22 @@ Enterprise transportation management system workspace.
 ```bash
 cd frontend
 flutter pub get
-flutter run -d chrome
+node tool/flutter_env.mjs run -d chrome
 ```
 
-Firebase login is wired for email/password and Google sign-in. After creating a Firebase project, run:
+Frontend runtime configuration is read from the project root `.env` file and
+passed to Flutter as client-safe `--dart-define` values. Start from
+`.env.example`, then keep the real `.env` out of source control.
+
+Firebase login is wired for email/password and Google sign-in. After creating a
+Firebase project, place the Firebase/Naver values in `.env`. For mobile builds,
+generate the platform config files locally:
 
 ```bash
-dart pub global activate flutterfire_cli
-flutterfire configure
+node tool/flutter_env.mjs prepare-firebase
 ```
 
-Allow FlutterFire to replace `frontend/lib/firebase_options.dart`.
+Do not commit generated Firebase platform files or `.env` values.
 
 ## Backend
 

@@ -4,6 +4,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import '../../config/app_config.dart';
+
 class MasterSaveResult {
   const MasterSaveResult({
     required this.persisted,
@@ -93,7 +95,7 @@ class MasterApi {
   const MasterApi();
 
   static const instance = MasterApi();
-  static const _configuredBaseUrl = String.fromEnvironment('KTMS_API_BASE_URL');
+  static const _configuredBaseUrl = AppConfig.apiBaseUrl;
 
   Future<MasterSaveResult> saveBusinessPartner(Map<String, Object?> payload) {
     return _post('/masters/business-partners', payload);

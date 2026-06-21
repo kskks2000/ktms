@@ -24,7 +24,7 @@ def db_connection() -> Iterator[psycopg.Connection]:
         port=settings.ktms_db_port,
         dbname=settings.ktms_db_name,
         user=settings.ktms_db_user,
-        password=settings.ktms_db_password,
+        password=settings.db_password,
         row_factory=dict_row,
     )
     try:
